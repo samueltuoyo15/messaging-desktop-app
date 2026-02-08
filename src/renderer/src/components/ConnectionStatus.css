@@ -1,0 +1,61 @@
+.connection-status {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: #ffffff;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+}
+
+.status-text {
+    font-size: 13px;
+    font-weight: 500;
+    color: #424242;
+}
+
+.simulate-btn {
+    padding: 6px 16px;
+    background: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #f44336;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.simulate-btn:hover:not(:disabled) {
+    background: #ffebee;
+    border-color: #f44336;
+}
+
+.simulate-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}

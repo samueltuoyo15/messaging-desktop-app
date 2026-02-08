@@ -1,7 +1,7 @@
 import DatabaseConstructor from 'better-sqlite3';
 import type { Database as DatabaseType } from 'better-sqlite3';
 import { Chat, Message } from '../shared/types';
-import { Faker } from '@faker-js/faker';
+import { faker } from '@faker-js/faker';
 
 export const database: DatabaseType = new DatabaseConstructor("messenger.db")
 
@@ -14,7 +14,7 @@ function isDatabaseSeeded(): boolean {
     return row.count > 0
 }
 
-database.prepare(`w
+database.prepare(`
     CREATE TABLE IF NOT EXISTS chats(
         id INTEGER PRIMARY KEY,
         title TEXT NOT NULL,
@@ -34,12 +34,16 @@ database.prepare(`
 
 database.prepare(`CREATE INDEX IF NOT EXISTS idx_chats_lastMessageAt ON chats(lastMessageAt DESC)`).run()
 database.prepare(`CREATE INDEX IF NOT EXISTS idx_messages_chatId_ts ON messages(chatId, ts DESC)`).run()
+database.prepare(`CREATE INDEX IF NOT EXISTS idx_messages_body ON messages(body)`).run()
 
 
 export function seedDatabase() {
     if(isDatabaseSeeded()) {
+        console.log('Database already seeded');
         return;
     }
+
+    console.log('Seeding database...');
 
     const insertChatstmt = database.prepare(`
             INSERT INTO chats (id, title, lastMessageAt, unreadCount)
@@ -56,12 +60,28 @@ export function seedDatabase() {
 
      database.transaction(() => {
         for(let chatId = 1; chatId <= 200; chatId++) {
-            const messagesPerChat = 100;
-            let lastMessaegAt = 0;
+            const messagesPerChat = Math.floor(Math.random() * 50) + 100; // 100-150 messages per chat
+            let lastMessageAt = 0;
 
-            for
+            // Generate messages for this chat
+            for(let i = 0; i < messagesPerChat; i++) {
+                const ts = now - (messagesPerChat - i) * 60000; // Space messages 1 minute apart
+                const sender = faker.person.fullName();
+                const body = faker.lorem.sentence();
+                
+                insertMessagestmt.run(messageId, chatId, ts, sender, body);
+                lastMessageAt = ts;
+                messageId++;
+            }
+
+            // Insert chat with last message timestamp
+            const title = faker.company.name();
+            const unreadCount = Math.floor(Math.random() * 10);
+            insertChatstmt.run(chatId, title, lastMessageAt, unreadCount);
         }
-     })
+     })()
+
+     console.log(`Seeded ${messageId - 1} messages across 200 chats`);
 }
 
 export function insertChat(chat: Chat) {
@@ -111,4 +131,25 @@ export function searchMessages(chatId: number, query: string): Message[] {
         `
     );
     return stmt.all(chatId, query) as Message[];
+}
+
+export function markChatAsRead(chatId: number): void {
+    const stmt = database.prepare(
+        `UPDATE chats SET unreadCount = 0 WHERE id = ?`
+    );
+    stmt.run(chatId);
+}
+
+export function updateChatLastMessage(chatId: number, timestamp: number): void {
+    const stmt = database.prepare(
+        `UPDATE chats SET lastMessageAt = ?, unreadCount = unreadCount + 1 WHERE id = ?`
+    );
+    stmt.run(timestamp, chatId);
+}
+
+export function searchAllMessages(query: string): Message[] {
+    const stmt = database.prepare(
+        `SELECT * FROM messages WHERE body LIKE '%' || ? || '%' ORDER BY ts DESC LIMIT 50`
+    );
+    return stmt.all(query) as Message[];
 }

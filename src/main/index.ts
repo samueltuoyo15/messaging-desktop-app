@@ -2,12 +2,23 @@ import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
+import { 
+  seedDatabase, 
+  getChats, 
+  getMessages, 
+  searchMessages, 
+  markChatAsRead,
+  searchAllMessages 
+} from './database.service'
+import { SyncServer } from './websocket.server'
+
+let syncServer: SyncServer | null = null;
 
 function createWindow(): void {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
-    width: 900,
-    height: 670,
+    width: 1200,
+    height: 800,
     show: false,
     autoHideMenuBar: true,
     ...(process.platform === 'linux' ? { icon } : {}),
@@ -49,8 +60,39 @@ app.whenReady().then(() => {
     optimizer.watchWindowShortcuts(window)
   })
 
-  // IPC test
-  ipcMain.on('ping', () => console.log('pong'))
+  // Initialize database
+  seedDatabase();
+
+  // Start WebSocket server
+  syncServer = new SyncServer(8080);
+  syncServer.start();
+
+  // IPC Handlers
+  ipcMain.handle('get-chats', async (_, offset: number, limit: number) => {
+    return getChats(offset, limit);
+  });
+
+  ipcMain.handle('get-messages', async (_, chatId: number, offset: number, limit: number) => {
+    return getMessages(chatId, offset, limit);
+  });
+
+  ipcMain.handle('search-messages', async (_, chatId: number, query: string) => {
+    return searchMessages(chatId, query);
+  });
+
+  ipcMain.handle('search-all-messages', async (_, query: string) => {
+    return searchAllMessages(query);
+  });
+
+  ipcMain.handle('mark-chat-read', async (_, chatId: number) => {
+    markChatAsRead(chatId);
+    return { success: true };
+  });
+
+  ipcMain.handle('simulate-disconnect', async () => {
+    syncServer?.simulateDisconnect();
+    return { success: true };
+  });
 
   createWindow()
 
@@ -65,6 +107,7 @@ app.whenReady().then(() => {
 // for applications and their menu bar to stay active until the user quits
 // explicitly with Cmd + Q.
 app.on('window-all-closed', () => {
+  syncServer?.stop();
   if (process.platform !== 'darwin') {
     app.quit()
   }

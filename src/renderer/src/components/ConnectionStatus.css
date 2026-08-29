@@ -1,67 +1,65 @@
 .connection-status {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 12px 20px;
-    background: #0a0a0a;
-    border-bottom: 1px solid #1a1a1a;
-    font-family: 'Inter', sans-serif;
+    gap: 12px;
+    padding: 8px 12px;
+    background: var(--bg-primary);
+    /* Blend with header */
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 0;
 }
 
 .status-indicator {
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    animation: pulse 2s ease-in-out infinite;
+    position: relative;
+}
+
+.status-indicator::after {
+    content: none;
+    /* No pulse animation */
 }
 
 .status-indicator.connected {
-    background: #10b981;
+    background: var(--status-online);
+    box-shadow: none;
 }
 
 .status-indicator.reconnecting {
-    background: #f59e0b;
+    background: #eab308;
+    /* Yellow */
+    box-shadow: none;
 }
 
 .status-indicator.offline {
     background: #ef4444;
-    animation: none;
+    /* Red */
+    box-shadow: none;
 }
 
 .status-text {
     font-size: 12px;
-    font-weight: 600;
-    color: #6b7280;
+    font-weight: 500;
+    color: var(--text-secondary);
     flex: 1;
 }
 
 .simulate-disconnect-btn {
-    padding: 6px 12px;
+    padding: 4px 10px;
     background: transparent;
-    border: 1px solid #1a1a1a;
-    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
     font-size: 11px;
-    font-weight: 600;
-    color: #6b7280;
+    font-weight: 500;
+    color: var(--text-secondary);
     cursor: pointer;
-    transition: all 0.2s;
-    font-family: 'Inter', sans-serif;
+    transition: all 0.1s;
 }
 
 .simulate-disconnect-btn:hover {
-    background: #1a1a1a;
-    border-color: #ef4444;
-    color: #ef4444;
-}
-
-@keyframes pulse {
-
-    0%,
-    100% {
-        opacity: 1;
-    }
-
-    50% {
-        opacity: 0.5;
-    }
+    background: var(--bg-tertiary);
+    border-color: var(--text-tertiary);
+    color: var(--text-primary);
+    transform: none;
 }

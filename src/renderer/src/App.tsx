@@ -1,5 +1,6 @@
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, useState } from 'react';
 import { Provider } from 'react-redux';
+import { ThemeProvider, CssBaseline } from '@mui/material';
 import { store } from './store';
 import { useAppDispatch, useAppSelector } from './store/hooks';
 import { setChats, appendChats, setLoading as setChatsLoading } from './store/chatsSlice';
@@ -7,7 +8,8 @@ import { setMessages, appendMessages, setLoading as setMessagesLoading } from '.
 import { useWebSocket } from './hooks/useWebSocket';
 import { ChatList } from './components/ChatList';
 import { MessageView } from './components/MessageView';
-import { ConnectionStatus } from './components/ConnectionStatus';
+import { Sidebar } from './components/Sidebar';
+import { theme } from './theme';
 import './App.css';
 
 const AppContent: React.FC = () => {
@@ -24,6 +26,9 @@ const AppContent: React.FC = () => {
   const messagesOffset = useAppSelector(state =>
     selectedChatId ? state.messages.offset[selectedChatId] || 0 : 0
   );
+  const connectionStatus = useAppSelector(state => state.connection.status);
+
+  const [activeTab, setActiveTab] = useState<'home' | 'messages' | 'profile'>('messages');
 
   // Initialize WebSocket connection
   useWebSocket();
@@ -44,8 +49,8 @@ const AppContent: React.FC = () => {
     if (selectedChatId) {
       const loadMessages = async () => {
         dispatch(setMessagesLoading(true));
-        const chatMessages = await window.api.getMessages(selectedChatId, 0, 50);
-        dispatch(setMessages({ chatId: selectedChatId, messages: chatMessages }));
+        const initialMessages = await window.api.getMessages(selectedChatId, 0, 50);
+        dispatch(setMessages({ chatId: selectedChatId, messages: initialMessages }));
         dispatch(setMessagesLoading(false));
       };
       loadMessages();
@@ -53,30 +58,36 @@ const AppContent: React.FC = () => {
   }, [selectedChatId, dispatch]);
 
   const handleLoadMoreChats = useCallback(async () => {
-    if (!hasMoreChats) return;
-
-    const moreChats = await window.api.getChats(chats.length, 50);
-    dispatch(appendChats(moreChats));
+    if (hasMoreChats) {
+      const nextChats = await window.api.getChats(chats.length, 50);
+      if (nextChats.length > 0) {
+        dispatch(appendChats(nextChats));
+      }
+    }
   }, [chats.length, hasMoreChats, dispatch]);
 
   const handleLoadMoreMessages = useCallback(async () => {
-    if (!selectedChatId || !hasMoreMessages) return;
-
-    const moreMessages = await window.api.getMessages(selectedChatId, messagesOffset, 50);
-    dispatch(appendMessages({ chatId: selectedChatId, messages: moreMessages }));
-  }, [selectedChatId, messagesOffset, hasMoreMessages, dispatch]);
-
-  const handleSimulateDisconnect = async () => {
-    await window.api.simulateDisconnect();
-  };
+    if (selectedChatId && hasMoreMessages) {
+      const nextMessages = await window.api.getMessages(selectedChatId, messagesOffset + 50, 50);
+      if (nextMessages.length > 0) {
+        dispatch(appendMessages({ chatId: selectedChatId, messages: nextMessages }));
+      }
+    }
+  }, [selectedChatId, hasMoreMessages, messagesOffset, dispatch]);
 
   return (
     <div className="app-container">
-      <div className="app-sidebar">
-        <ConnectionStatus onSimulateDisconnect={handleSimulateDisconnect} />
-        <ChatList chats={chats} onLoadMore={handleLoadMoreChats} />
+      <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
+
+      <div className="chat-sidebar">
+        <ChatList
+          chats={chats}
+          onLoadMore={handleLoadMoreChats}
+          connectionStatus={connectionStatus}
+        />
       </div>
-      <div className="app-main">
+
+      <div className="main-content">
         <MessageView
           chatId={selectedChatId || 0}
           messages={messages}
@@ -91,7 +102,10 @@ const AppContent: React.FC = () => {
 function App(): React.JSX.Element {
   return (
     <Provider store={store}>
-      <AppContent />
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <AppContent />
+      </ThemeProvider>
     </Provider>
   );
 }
